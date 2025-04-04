@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 const db = require("../db"); // Your database connection
+const authenticateToken = require("../middleware/authMiddleware");
 require("dotenv").config();
 const { body, validationResult } = require("express-validator");
 
@@ -205,6 +206,68 @@ router.get("/verify-reset-token/:resetToken", (req, res) => {
       // If token is valid, send a success response
       res.json({ message: "Token is valid" });
   });
+});
+
+
+router.get("/account-settings", authenticateToken, async (req, res) => {
+  try {
+    const email = req.user.email;
+    console.log('USER: ',email)
+    const [user] = await db.query("SELECT First_Name, Last_Name, Email, Phone, Notification_Preference FROM users WHERE Email = ?", [email]);
+
+    if (user.length === 0) return res.status(404).json({ message: "User not found" });
+    console.log('USER: ',user)
+    const { First_Name, Last_Name, Email, Phone, Notification_Preference } = user[0];
+    res.json({
+      fullName: `${First_Name} ${Last_Name}`,
+      email: Email,
+      phone: Phone,
+      notifications: JSON.parse(Notification_Preference || '{"email": true, "sms": false}')
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error retrieving account details", error });
+  }
+});
+
+router.post("/account-settings", authenticateToken, async (req, res) => {
+  try {
+    const email = req.user.email;
+    const {
+      fullName,
+      phone,
+      password,
+      newPassword,
+      confirmPassword,
+      notifications
+    } = req.body;
+
+    const [firstName, ...rest] = fullName.split(" ");
+    const lastName = rest.join(" ");
+
+    // Update name, phone, and notifications
+    await db.query(
+        "UPDATE users SET First_Name = ?, Last_Name = ?, Phone = ?, Notification_Preference = ? WHERE Email = ?",
+        [firstName, lastName, phone, JSON.stringify(notifications), email]
+      );
+
+    // Handle password update
+    if (password && newPassword && confirmPassword) {
+      const [user] = await db.query("SELECT Password FROM users WHERE Email = ?", [email]);
+      const match = await bcrypt.compare(password, user[0].Password);
+      if (!match) return res.status(400).json({ message: "Current password is incorrect" });
+
+      if (newPassword !== confirmPassword) return res.status(400).json({ message: "Passwords do not match" });
+      if (password == newPassword && password == confirmPassword) return res.status(400).json({ message: "New Password cannot be the same as old password" });
+
+      const hashed = await bcrypt.hash(newPassword, 10);
+      await db.query("UPDATE users SET Password = ? WHERE Email = ?", [hashed, email]);
+    }
+
+    res.json({ message: "Account updated successfully" });
+  } catch (error) {
+    console.error("Update error:", error);
+    res.status(500).json({ message: "Error updating account", error });
+  }
 });
 
 
