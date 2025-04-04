@@ -1,7 +1,9 @@
 const express = require("express");
-const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const db = require("../db");
+const bcrypt = require("bcryptjs");
+const nodemailer = require("nodemailer");
+const db = require("../db"); // Your database connection
+require("dotenv").config();
 const { body, validationResult } = require("express-validator");
 
 const router = express.Router();
@@ -96,6 +98,114 @@ router.post(
     }
   }
 );
+
+// Email transporter setup
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+      user: process.env.EMAIL_USER, // Your email
+      pass: process.env.EMAIL_PASS, // Your app password
+  },
+});
+
+// Forgot Password Route
+router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+
+  console.log("Received request for:", email); // Debugging
+
+  // Check if user exists
+  try{
+      const [userRows] = await db.query('SELECT * FROM users WHERE Email = ?', [email]);
+
+      if (userRows.length === 0) {
+        return res.status(404).json({ message: 'No account found with that email address.' });
+      }
+
+      const user = userRows[0];
+
+      const resetToken = jwt.sign({ userId: user.User_ID }, process.env.JWT_SECRET, { expiresIn: '30m' });
+
+      const resetLink = `http://localhost:3000/WDM_Team8/reset-password/${resetToken}`;
+
+      console.log("Generated reset link:", resetLink);
+
+      // Send email
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Password Reset Link',
+        html: `
+          <p>Hello ${user.First_Name},</p> <br/> <p>You requested a password reset. Click below to reset it. This link is valid for 1 minute.</p> <br/> <a href="${resetLink}">Reset Password</a> <br/><br/> <p>If you didn't request this, please ignore this email.</p> `,
+      };
+      
+      transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+              console.error("Error sending email:", error);
+              return res.status(500).json({ message: "Email not sent" });
+          }
+
+          console.log("Email sent successfully:", info.response);
+          res.json({ message: "Reset link sent to email" });
+      });
+  
+  console.log('Outside query')
+}catch (err) {
+  console.error("Forgot password error:", err);
+  res.status(500).json({ message: 'Internal Server Error' });
+}
+});
+
+
+// Reset Password Route
+router.post("/reset-password", async (req, res) => {
+  const { resetToken, password } = req.body;
+  console.log("Received request for:", resetToken, password);
+  try {
+    // Verify token
+    const decoded = jwt.verify(resetToken, process.env.JWT_SECRET); // Wait for token verification
+    console.log('DECODED: ',decoded)
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update password in the database
+    const [results] = await db.query(
+      "UPDATE users SET Password = ? WHERE User_ID = ?",
+      [hashedPassword, decoded.userId]
+    );
+
+    // Check if the update was successful
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Return success message
+    res.json({ message: "Password successfully reset" });
+  } catch (err) {
+    if (err.name === 'JsonWebTokenError') {
+      // Token verification failed
+      return res.status(400).json({ message: "Invalid or expired token" });
+    } else {
+      // Other errors (e.g., database, bcrypt)
+      console.error(err);
+      return res.status(500).json({ message: "Server error" });
+    }
+  }
+});
+
+
+// Add this route to your authRoutes.js to verify the token
+router.get("/verify-reset-token/:resetToken", (req, res) => {
+  const { resetToken } = req.params;
+
+  // Verify token validity (checking if it's expired or invalid)
+  jwt.verify(resetToken, process.env.JWT_SECRET, (err, decoded) => {
+      if (err) return res.status(400).json({ message: "Invalid or expired token" });
+
+      // If token is valid, send a success response
+      res.json({ message: "Token is valid" });
+  });
+});
 
 
 module.exports = router;
