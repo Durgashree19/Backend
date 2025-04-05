@@ -37,8 +37,11 @@ router.post(
 
       // Insert user into DB
       const result = await db.query(
-        "INSERT INTO users (First_Name, Last_Name, Email, Password, Phone, Address, Role, Date_Joined) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())",
-        [firstName, lastName, email, hashedPassword, phone || null, address || null, role || "User"]
+        "INSERT INTO users (First_Name, Last_Name, Email, Password, Phone, Address, Role, Notification_Preference, Subscriber, Date_Joined) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, Now())",
+        [firstName, lastName, email, hashedPassword, phone || null, address || null, role || "User", JSON.stringify({
+          email: false,
+          sms: false,
+        }), false]
       );
 
       // Generate JWT Token
@@ -270,5 +273,39 @@ router.post("/account-settings", authenticateToken, async (req, res) => {
   }
 });
 
+// Route to handle newsletter subscription
+router.post("/subscribe", async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
+  try {
+    // Step 1: Send the confirmation email
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Thanks for subscribing to our Newsletter!",
+      html: `<h2>Welcome to Our Newsletter! 🎉</h2><br/><p>Thank you for subscribing. We'll keep you updated with exclusive offers and updates.</p><br/><p>If you ever wish to unsubscribe, just reply with "Unsubscribe".</p><br/><p>Warm regards,<br/>The Team</p>`,
+    });
+
+    // Step 2: Update the 'Subscriber' column to true in the users table
+    const [results] = await db.query(
+      "UPDATE users SET Subscriber = true WHERE email = ?",
+      [email]  // The user’s email passed from the request body
+    );
+
+    // Check if the update was successful
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "Subscription successful and email sent!" });
+  } catch (error) {
+    console.error("Email send or DB update error:", error);
+    res.status(500).json({ message: "Failed to send email or update subscription. Try again later." });
+  }
+});
 
 module.exports = router;
