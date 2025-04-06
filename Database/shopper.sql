@@ -2,7 +2,7 @@
 -- version 5.1.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1:3308
+-- Host: 127.0.0.1:3306
 -- Generation Time: Mar 19, 2025 at 06:06 AM
 -- Server version: 10.4.22-MariaDB
 -- PHP Version: 8.1.1
@@ -42,11 +42,11 @@ CREATE TABLE `ai_recommendations` (
 -- Table structure for table `brands`
 --
 
-CREATE TABLE `brands` (
-  `Brand_ID` int(11) NOT NULL,
-  `Brand_Name` varchar(100) DEFAULT NULL,
-  `Description` text DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- CREATE TABLE `brands` (
+--   `Brand_ID` int(11) NOT NULL,
+--   `Brand_Name` varchar(100) DEFAULT NULL,
+--   `Description` text DEFAULT NULL
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -63,23 +63,50 @@ CREATE TABLE `categories` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `orders`
---
 
-CREATE TABLE `orders` (
-  `Order_ID` int(11) NOT NULL,
-  `User_ID` int(11) DEFAULT NULL,
-  `Product_ID` int(11) NOT NULL,
-  `Color` varchar(100) NOT NULL,
-  `Size` varchar(100) NOT NULL,
-  `Order_Status` enum('Pending','Shipped','Delivered','Cancelled') DEFAULT NULL,
-  `Total_Amount` decimal(10,2) DEFAULT NULL,
-  `Order_Date` timestamp(6) NULL DEFAULT NULL,
-  `Payment_ID` int(11) DEFAULT NULL,
-  `Shipping_ID` int(11) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- ORDERS table (no Product_ID, Color, Size here anymore)
+CREATE TABLE orders (
+  Order_ID INT AUTO_INCREMENT PRIMARY KEY,
+  User_ID INT NOT NULL,
+  Order_Status ENUM('Pending','Shipped','Delivered','Cancelled') DEFAULT 'Pending',
+  Total_Amount DECIMAL(10, 2) NOT NULL,
+  Order_Date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  Shipping_ID INT,
+  FOREIGN KEY (User_ID) REFERENCES users(User_ID),
+  FOREIGN KEY (Shipping_ID) REFERENCES shipping_details(Shipping_ID)
+);
+
+-- ORDER ITEMS table to store individual product details
+CREATE TABLE order_items (
+  Order_Item_ID INT AUTO_INCREMENT PRIMARY KEY,
+  Order_ID INT NOT NULL,
+  Product_ID INT NOT NULL,
+  Quantity INT NOT NULL,
+  Size VARCHAR(100) NOT NULL,
+  Color VARCHAR(100) NOT NULL,
+  Subtotal DECIMAL(10, 2) NOT NULL,
+  FOREIGN KEY (Order_ID) REFERENCES orders(Order_ID) ON DELETE CASCADE,
+  FOREIGN KEY (Product_ID) REFERENCES products(Product_ID)
+);
+
 
 -- --------------------------------------------------------
+
+-- Table structure for table `favourites`
+
+CREATE TABLE favourites (
+  Favourite_ID INT AUTO_INCREMENT PRIMARY KEY,
+  User_ID INT NOT NULL,
+  Product_ID INT NOT NULL,
+  Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_fav (User_ID, Product_ID),
+  FOREIGN KEY (User_ID) REFERENCES users(User_ID) ON DELETE CASCADE,
+  FOREIGN KEY (Product_ID) REFERENCES products(Product_ID) ON DELETE CASCADE
+);
+
+
+-- --------------------------------------------------------
+
 
 --
 -- Table structure for table `order_items`
@@ -126,9 +153,28 @@ CREATE TABLE `products` (
   `Color` varchar(100) NOT NULL,
   `AI_Tagging` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`AI_Tagging`)),
   `Category_ID` int(11) DEFAULT NULL,
-  `Brand_ID` int(11) DEFAULT NULL,
+  -- `Brand_ID` int(11) DEFAULT NULL,
   `Seller_ID` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE product_images (
+  Image_ID INT AUTO_INCREMENT PRIMARY KEY,
+  Product_ID INT NOT NULL,
+  Color VARCHAR(100),
+  Image_Data LONGBLOB,
+  MIME_Type VARCHAR(100),
+  FOREIGN KEY (Product_ID) REFERENCES products(Product_ID) ON DELETE CASCADE
+);
+
+-- CREATE TABLE `products` (
+--   `id` INT NOT NULL AUTO_INCREMENT,
+--   `name` VARCHAR(100) NOT NULL,
+--   `description` TEXT,
+--   `price` DECIMAL(10, 2) NOT NULL,
+--   `stock` INT DEFAULT 0,
+--   PRIMARY KEY (`id`)
+-- );
+
 
 -- --------------------------------------------------------
 
