@@ -2,8 +2,8 @@
 -- version 5.1.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1:3306
--- Generation Time: Mar 19, 2025 at 06:06 AM
+-- Host: 127.0.0.1:3308
+-- Generation Time: Apr 06, 2025 at 07:42 PM
 -- Server version: 10.4.22-MariaDB
 -- PHP Version: 8.1.1
 
@@ -256,8 +256,17 @@ CREATE TABLE `users` (
   `Phone` varchar(20) DEFAULT NULL,
   `Address` text DEFAULT NULL,
   `Role` enum('Customer','Seller','Admin') DEFAULT NULL,
+  `Notification_Preference` varchar(100) NOT NULL,
+  `Subscriber` tinyint(1) NOT NULL,
   `Date_Joined` timestamp(6) NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`User_ID`, `First_Name`, `Last_Name`, `Email`, `Password`, `Phone`, `Address`, `Role`, `Notification_Preference`, `Subscriber`, `Date_Joined`) VALUES
+(4, 'Durgashree', 'Hakkinalu Somashekaraiah', 'dxh7918@mavs.uta.edu', '$2b$10$VMEvBs0L4L7p2NB8hSRs8.xipR3T92gh.0XfWrGPteVZzrFYRRZjy', '6825492165', NULL, '', '{\"email\":true,\"sms\":true}', 1, '2025-03-29 01:28:01.000000');
 
 --
 -- Indexes for dumped tables
@@ -434,7 +443,7 @@ ALTER TABLE `shopping_cart`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `User_ID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `User_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- Constraints for dumped tables
