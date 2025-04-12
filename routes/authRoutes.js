@@ -38,7 +38,7 @@ router.post(
       // Insert user into DB
       const result = await db.query(
         "INSERT INTO users (First_Name, Last_Name, Email, Password, Phone, Address, Role, Notification_Preference, Subscriber, Date_Joined) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, Now())",
-        [firstName, lastName, email, hashedPassword, phone || null, address || null, role || "User", JSON.stringify({
+        [firstName, lastName, email, hashedPassword, phone || null, address || null, role || "Customer", JSON.stringify({
           email: false,
           sms: false,
         }), false]

@@ -206,25 +206,44 @@ CREATE TABLE `sellers` (
   `Rating` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- --------------------------------------------------------
+-- -- --------------------------------------------------------
 
---
--- Table structure for table `shipping_details`
---
+-- --
+-- -- Table structure for table `shipping_details`
+-- --
 
-CREATE TABLE `shipping_details` (
-  `Shipping_ID` int(11) NOT NULL,
-  `User_ID` int(11) DEFAULT NULL,
-  `Shipping_Address` text DEFAULT NULL,
-  `City` varchar(100) DEFAULT NULL,
-  `State` varchar(100) DEFAULT NULL,
-  `Country` varchar(100) DEFAULT NULL,
-  `Zip_Code` varchar(10) DEFAULT NULL,
-  `Tracking_Number` varchar(50) DEFAULT NULL,
-  `Carrier` varchar(50) DEFAULT NULL,
-  `Status` enum('Shipped','In Transit','Delivered','Returned') DEFAULT NULL,
-  `Order_ID` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- CREATE TABLE `shipping_details` (
+--   `Shipping_ID` int(11) NOT NULL,
+--   `User_ID` int(11) DEFAULT NULL,
+--   `Shipping_Address` text DEFAULT NULL,
+--   `City` varchar(100) DEFAULT NULL,
+--   `State` varchar(100) DEFAULT NULL,
+--   `Country` varchar(100) DEFAULT NULL,
+--   `Zip_Code` varchar(10) DEFAULT NULL,
+--   `Tracking_Number` varchar(50) DEFAULT NULL,
+--   `Carrier` varchar(50) DEFAULT NULL,
+--   `Status` enum('Shipped','In Transit','Delivered','Returned') DEFAULT NULL,
+--   `Order_ID` int(11) NOT NULL
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE shipping_details (
+  Shipping_ID INT AUTO_INCREMENT PRIMARY KEY,
+  User_ID INT NOT NULL,
+  First_Name VARCHAR(100),
+  Last_Name VARCHAR(100),
+  Address_Line1 VARCHAR(255),
+  Address_Line2 VARCHAR(255),
+  City VARCHAR(100),
+  Country VARCHAR(100),
+  State VARCHAR(100),
+  Zipcode VARCHAR(20),
+  Optional_Notes TEXT,
+  Save_Info BOOLEAN DEFAULT false,
+  Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (User_ID) REFERENCES users(User_ID)
+);
+
 
 -- --------------------------------------------------------
 
