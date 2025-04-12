@@ -308,4 +308,33 @@ router.post("/subscribe", async (req, res) => {
   }
 });
 
+//Contact us mail
+router.post("/send-enquiry", async (req, res) => {
+  const { name, email, phone, message } = req.body;
+
+  try {
+    // Email content
+    const mailOptions = {
+      from: email,
+      to: "justbuywdm@gmail.com",
+      subject: "New Contact Us Enquiry",
+      html: `
+        <h3>New Enquiry from Contact Us Form</h3>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Phone:</strong> ${phone}</p>
+        <p><strong>Message:</strong><br/>${message}</p>
+      `,
+    };
+
+    // Send email
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: "Enquiry sent successfully!" });
+  } catch (error) {
+    console.error("Error sending enquiry:", error);
+    res.status(500).json({ message: "Failed to send enquiry. Please try again later." });
+  }
+});
+
 module.exports = router;
