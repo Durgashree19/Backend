@@ -337,4 +337,48 @@ router.post("/send-enquiry", async (req, res) => {
   }
 });
 
+//API that Admin uses to sends notifications about offers to subscribers
+router.post("/offer-notifications", async (req, res) => {
+  const { message } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ success: false, error: "Message is required" });
+  }
+
+  try {
+    // Get subscribers from users table
+    const [subscribers] = await db.query("SELECT Email FROM users WHERE Subscriber = TRUE");
+    console.log('SUBS: ',subscribers)
+
+    if (subscribers.length === 0) {
+      return res.status(200).json({ success: true, message: "No subscribers to notify." });
+    }
+
+    // Send email to each subscriber
+    for (const subscriber of subscribers) {
+      console.log('SUBS EMAIL: ',subscriber.Email)
+      console.log('message: ',message)
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: subscriber.Email,
+        subject: "JustBuy Notification",
+        text: message,
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`✅ Sent email to ${subscriber.Email}`);
+      } catch (sendErr) {
+        console.error(`❌ Failed to send email to ${subscriber.Email}:`, sendErr);
+      }
+      
+    }
+
+    res.status(200).json({ success: true, message: "Notifications sent to all subscribers." });
+  } catch (err) {
+    console.error("Error sending notification emails:", err);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+});
+
 module.exports = router;
