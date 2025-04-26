@@ -410,4 +410,21 @@ router.post("/validate-promo", async (req, res) => {
   }
 });
 
+router.post("/deactivate-promoCode", async (req, res) => {
+  try {
+    const {promocode} = req.body;
+
+    // Update name, phone, and notifications
+    await db.query(
+        "UPDATE promo_codes SET expired = ? WHERE Promo_Code = ?",
+        [true,promocode]
+      );
+
+    res.json({ message: "Promo Code Deactivated" });
+  } catch (error) {
+    console.error("Update error:", error);
+    res.status(500).json({ message: "Error updating account", error });
+  }
+});
+
 module.exports = router;
