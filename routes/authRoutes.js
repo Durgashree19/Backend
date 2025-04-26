@@ -384,4 +384,30 @@ router.post("/offer-notifications", async (req, res) => {
   }
 });
 
+// Promo Code Validation API
+router.post("/validate-promo", async (req, res) => {
+  const { promoCode } = req.body;
+  console.log('promoCode:',promoCode)
+  if (!promoCode) {
+    return res.status(400).json({ success: false, message: "Promo code is required" });
+  }
+
+  try {
+    const [results] = await db.query(
+      "SELECT * FROM promo_codes WHERE BINARY Promo_Code = ? AND Expired = 0",
+      [promoCode]
+    );
+
+    if (results.length === 0) {
+      return res.status(200).json({ success: false,  message: "Invalid or expired promo code" });
+    }
+
+    // Promo code is valid
+    return res.status(200).json({ success: true,discountPercentage: 10 }); // Always 10% discount
+  } catch (error) {
+    console.error("Error validating promo code:", error);
+    return res.status(500).json({ message: "Server error while validating promo code" });
+  }
+});
+
 module.exports = router;
