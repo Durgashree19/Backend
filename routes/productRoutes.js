@@ -366,5 +366,44 @@ router.get('/:productId/complementary', async (req, res) => {
   }
 });
 
+router.post('/:productId/reviews', async (req, res) => {
+  const { productId } = req.params;
+  const { userId, rating, reviewText } = req.body;
+
+  try {
+    const [result] = await db.query(
+      `INSERT INTO product_reviews (Product_ID, User_ID, Rating, Review_Text)
+       VALUES (?, ?, ?, ?)`,
+      [productId, userId, rating, reviewText]
+    );
+
+    return res.status(201).json({ message: 'Review added successfully', reviewId: result.insertId });
+  } catch (err) {
+    console.error('❌ Error adding review:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.get('/:productId/reviews', async (req, res) => {
+  const { productId } = req.params;
+
+  try {
+    const [reviews] = await db.query(
+      `SELECT r.Rating, r.Review_Text, r.Created_At, u.First_Name, u.Last_Name
+       FROM product_reviews r
+       JOIN users u ON r.User_ID = u.User_ID
+       WHERE r.Product_ID = ?
+       ORDER BY r.Created_At DESC`,
+      [productId]
+    );
+
+    return res.status(200).json(reviews);
+  } catch (err) {
+    console.error('❌ Error fetching reviews:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
 
 module.exports = router;

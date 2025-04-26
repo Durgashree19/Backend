@@ -112,6 +112,17 @@ CREATE TABLE `orders` (
   `Shipping_ID` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE product_reviews (
+  Review_ID INT AUTO_INCREMENT PRIMARY KEY,
+  Product_ID INT NOT NULL,
+  User_ID INT NOT NULL,
+  Rating INT NOT NULL CHECK (Rating BETWEEN 1 AND 5),
+  Review_Text TEXT,
+  Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (Product_ID) REFERENCES products(Product_ID) ON DELETE CASCADE,
+  FOREIGN KEY (User_ID) REFERENCES users(User_ID) ON DELETE CASCADE
+);
+
 -- --------------------------------------------------------
 
 --
