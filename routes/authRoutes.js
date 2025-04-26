@@ -276,13 +276,20 @@ router.post("/account-settings", authenticateToken, async (req, res) => {
 // Route to handle newsletter subscription
 router.post("/subscribe", async (req, res) => {
   const { email } = req.body;
-
+  console.log('EMAIL:',email)
   if (!email) {
     return res.status(400).json({ message: "Email is required" });
   }
 
   try {
-    // Step 1: Send the confirmation email
+    // Step 1: Check if the user exists
+    const [userRows] = await db.query("SELECT * FROM users WHERE Email = ?", [email]);
+    
+    if (userRows.length === 0) {
+      return res.status(200).json({ success: false, message: "User not found with this email" });
+    }
+
+    // Step 2: Send the confirmation email
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
@@ -290,18 +297,14 @@ router.post("/subscribe", async (req, res) => {
       html: `<h2>Welcome to Our Newsletter! 🎉</h2><br/><p>Thank you for subscribing. We'll keep you updated with exclusive offers and updates.</p><br/><p>If you ever wish to unsubscribe, just reply with "Unsubscribe".</p><br/><p>Warm regards,<br/>The Team</p>`,
     });
 
-    // Step 2: Update the 'Subscriber' column to true in the users table
+    // Step 3: Update the 'Subscriber' column to true in the users table
     const [results] = await db.query(
       "UPDATE users SET Subscriber = true WHERE email = ?",
       [email]  // The user’s email passed from the request body
     );
+    console.log('results:',results)
 
-    // Check if the update was successful
-    if (results.affectedRows === 0) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json({ message: "Subscription successful and email sent!" });
+    res.status(200).json({ success: true, message: "Subscription successful and email sent!" });
   } catch (error) {
     console.error("Email send or DB update error:", error);
     res.status(500).json({ message: "Failed to send email or update subscription. Try again later." });
@@ -334,6 +337,76 @@ router.post("/send-enquiry", async (req, res) => {
   } catch (error) {
     console.error("Error sending enquiry:", error);
     res.status(500).json({ message: "Failed to send enquiry. Please try again later." });
+  }
+});
+
+//API that Admin uses to sends notifications about offers to subscribers
+router.post("/offer-notifications", async (req, res) => {
+  const { message } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ success: false, error: "Message is required" });
+  }
+
+  try {
+    // Get subscribers from users table
+    const [subscribers] = await db.query("SELECT Email FROM users WHERE Subscriber = TRUE");
+    console.log('SUBS: ',subscribers)
+
+    if (subscribers.length === 0) {
+      return res.status(200).json({ success: true, message: "No subscribers to notify." });
+    }
+
+    // Send email to each subscriber
+    for (const subscriber of subscribers) {
+      console.log('SUBS EMAIL: ',subscriber.Email)
+      console.log('message: ',message)
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: subscriber.Email,
+        subject: "JustBuy Notification",
+        text: message,
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`✅ Sent email to ${subscriber.Email}`);
+      } catch (sendErr) {
+        console.error(`❌ Failed to send email to ${subscriber.Email}:`, sendErr);
+      }
+      
+    }
+
+    res.status(200).json({ success: true, message: "Notifications sent to all subscribers." });
+  } catch (err) {
+    console.error("Error sending notification emails:", err);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+});
+
+// Promo Code Validation API
+router.post("/validate-promo", async (req, res) => {
+  const { promoCode } = req.body;
+  console.log('promoCode:',promoCode)
+  if (!promoCode) {
+    return res.status(400).json({ success: false, message: "Promo code is required" });
+  }
+
+  try {
+    const [results] = await db.query(
+      "SELECT * FROM promo_codes WHERE BINARY Promo_Code = ? AND Expired = 0",
+      [promoCode]
+    );
+
+    if (results.length === 0) {
+      return res.status(200).json({ success: false,  message: "Invalid or expired promo code" });
+    }
+
+    // Promo code is valid
+    return res.status(200).json({ success: true,discountPercentage: 10 }); // Always 10% discount
+  } catch (error) {
+    console.error("Error validating promo code:", error);
+    return res.status(500).json({ message: "Server error while validating promo code" });
   }
 });
 
