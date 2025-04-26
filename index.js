@@ -68,6 +68,8 @@ const cartRoutes = require('./routes/cartRoutes');
 const favouriteRoutes = require('./routes/favouriteRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const shippingRoutes = require('./routes/shippingRoutes');
+const searchRoutes = require('./routes/searchRoutes');
+const recommendationRoutes = require('./routes/recommendationRoutes');
 
 app.use("/api/auth", authRoutes);
 app.use('/api/products', productRoutes);
@@ -77,6 +79,8 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/favourites', favouriteRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/shipping', shippingRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 // ✅ Fallback for unknown routes
 app.use((req, res, next) => {
