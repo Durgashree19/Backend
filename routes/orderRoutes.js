@@ -13,7 +13,7 @@ router.post('/', async (req, res) => {
     // Insert into orders (single record)
     const [orderResult] = await conn.query(`
       INSERT INTO orders (User_ID, Order_Status, Total_Amount, Order_Date, Shipping_ID)
-      VALUES (?, 'Pending', ?, NOW(), ?)`,
+      VALUES (?, 'Shipped', ?, NOW(), ?)`,
       [User_ID, Total_Amount, Shipping_ID]
     );
 
