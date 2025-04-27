@@ -48,15 +48,26 @@ const express = require("express");
 const cors = require("cors");
 const db = require("./db");
 require("dotenv").config();
-
+const http = require('http');
+const socketIo = require('socket.io');
 const app = express();
 
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "http://localhost:3000", // Frontend origin
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  transports: ['websocket', 'polling'],
+});
 // ✅ CORS configuration
 app.use(cors({
   origin: "http://localhost:3000", // your frontend URL
   credentials: true               // if you're using cookies, sessions, or auth headers
 }));
 
+// app.use(cors());
 app.use(express.json());
 
 // ✅ Routes
@@ -70,6 +81,8 @@ const orderRoutes = require('./routes/orderRoutes');
 const shippingRoutes = require('./routes/shippingRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const recommendationRoutes = require('./routes/recommendationRoutes');
+const messageRoutes = require('./routes/messages');
+const userRoutes = require('./routes/users');
 
 app.use("/api/auth", authRoutes);
 app.use('/api/products', productRoutes);
@@ -81,6 +94,8 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/shipping', shippingRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/users', userRoutes);
 
 // ✅ Fallback for unknown routes
 app.use((req, res, next) => {
@@ -88,8 +103,33 @@ app.use((req, res, next) => {
   res.status(404).json({ message: 'Not found' });
 });
 
+// Socket.IO
+io.on('connection', (socket) => {
+  console.log('🟢 New client connected');
+
+  socket.on('send_message', async (data) => {
+    const { sender_id, receiver_id, message } = data;
+    const timestamp = new Date();
+    console.log('DATA:',data)
+    try {
+      await db.execute(
+        'INSERT INTO messages (sender_id, receiver_id, message, timestamp) VALUES (?, ?, ?, ?)',
+        [sender_id, receiver_id, message, timestamp]
+      );
+
+      io.emit('receive_message', { sender_id, receiver_id, message, timestamp });
+    } catch (err) {
+      console.error('Error saving message:', err);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('🔴 Client disconnected');
+  });
+});
+
 // ✅ Start server
 const PORT = process.env.PORT || 8081;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
