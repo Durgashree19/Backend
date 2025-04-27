@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const authenticateToken = require('../middleware/authMiddleware');
 
 // CREATE a product
 router.post('/', async (req, res) => {
@@ -366,23 +367,23 @@ router.get('/:productId/complementary', async (req, res) => {
   }
 });
 
-router.post('/:productId/reviews', async (req, res) => {
-  const { productId } = req.params;
-  const { userId, rating, reviewText } = req.body;
+// router.post('/:productId/reviews', async (req, res) => {
+//   const { productId } = req.params;
+//   const { userId, rating, reviewText } = req.body;
 
-  try {
-    const [result] = await db.query(
-      `INSERT INTO product_reviews (Product_ID, User_ID, Rating, Review_Text)
-       VALUES (?, ?, ?, ?)`,
-      [productId, userId, rating, reviewText]
-    );
+//   try {
+//     const [result] = await db.query(
+//       `INSERT INTO product_reviews (Product_ID, User_ID, Rating, Review_Text)
+//        VALUES (?, ?, ?, ?)`,
+//       [productId, userId, rating, reviewText]
+//     );
 
-    return res.status(201).json({ message: 'Review added successfully', reviewId: result.insertId });
-  } catch (err) {
-    console.error('❌ Error adding review:', err.message);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+//     return res.status(201).json({ message: 'Review added successfully', reviewId: result.insertId });
+//   } catch (err) {
+//     console.error('❌ Error adding review:', err.message);
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// });
 
 router.get('/:productId/reviews', async (req, res) => {
   const { productId } = req.params;
@@ -404,6 +405,55 @@ router.get('/:productId/reviews', async (req, res) => {
   }
 });
 
+
+// Route to check if user can review
+router.get('/:productId/can-review', authenticateToken, async (req, res) => {
+  const { productId } = req.params;
+  const userId = req.user.userId; 
+
+  try {
+      const [orders] = await db.query('SELECT Order_ID FROM orders WHERE User_ID = ?', [userId]);
+      const orderIds = orders.map(order => order.Order_ID);
+
+      if (orderIds.length === 0) {
+          return res.json({ canReview: false });
+      }
+
+      const [orderItems] = await db.query('SELECT Product_ID FROM order_items WHERE Order_ID IN (?)', [orderIds]);
+
+      const purchasedProductIds = orderItems.map(item => item.Product_ID);
+
+      if (purchasedProductIds.includes(parseInt(productId))) {
+          return res.json({ canReview: true });
+      } else {
+          return res.json({ canReview: false });
+      }
+  } catch (err) {
+      console.error('Error checking review eligibility:', err);
+      res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Route to submit a review
+router.post('/:productId/reviews', authenticateToken, async (req, res) => {
+  const { productId } = req.params;
+  const userId = req.user.userId;
+  const { rating, reviewText } = req.body;
+
+  console.log('HERE:',req.user)
+
+  try {
+      const [result] = await db.query(
+          'INSERT INTO product_reviews (Product_ID, User_ID, Rating, Review_Text, Created_At) VALUES (?, ?, ?, ?, NOW())',
+          [productId, userId, rating, reviewText]
+      );
+
+      res.json({ message: 'Review submitted successfully', Review_ID: result.insertId });
+  } catch (err) {
+      console.error('Error submitting review:', err);
+      res.status(500).json({ message: 'Server error' });
+  }
+});
 
 
 module.exports = router;
